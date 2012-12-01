@@ -38,6 +38,7 @@ class MtGox_Api_Base
     public function set_currency($currency)
     {
         $this->active_currency = $this->sanitise_currency($currency);
+        return $this;
     }
 
     public function sanitise_currency($currency)

@@ -8,23 +8,27 @@ class MtGox_Public_Api extends MtGox_Api_Base
     const uri_trades          = '1/BTC%s/trades';
     const uri_cancelledtrades = '1/BTC%s/cancelledtrades';
     const uri_fulldepth       = '1/BTC%s/fulldepth';
-    const uri_tx_details      = '1/BTC%s/tx_details';
+    const uri_tx_details      = '1/generic/bitcoin/tx_details';
+    const uri_block_list      = '1/generic/bitcoin/block_list_tx';
+    const uri_addr_details    = '1/generic/bitcoin/addr_details';
+    const uri_order_lag       = '1/generic/order/lag';
+    const uri_currency_info   = '1/generic/currency';
 
     // returns the current ticker for the selected currency
-    public function get_ticker($currency)
+    public function get_ticker()
     {
-        return $this->send_public_request(self::uri_ticker, $currency);
+        return $this->send_public_request(self::uri_ticker);
     }
 
     // Depth returns outstanding asks (selling) and bids (buying) orders
     //   Returns array('asks'=>array(...), 'bids'=>array(...));
-    public function get_depth($currency)
+    public function get_depth()
     {
-        return $this->send_public_request(self::uri_depth, $currency);
+        return $this->send_public_request(self::uri_depth);
     }
 
     // To get only the trades since a given trade id
-    public function get_trades($currency, $since_txn=null, $show_duplicates=false)
+    public function get_trades($since_txn=null, $show_duplicates=false)
     {
         $params = array();
         if ($since_txn)
@@ -32,27 +36,65 @@ class MtGox_Public_Api extends MtGox_Api_Base
 
         $params['primary'] = ($show_duplicates) ? 'N' : 'Y';
 
-        return $this->send_public_request(self::uri_trades, $currency, $params);
+        return $this->send_public_request(self::uri_trades, $params);
     }
 
     // returns a list of all the cancelled trades this last month, list of trade ids in json format
-    public function get_cancelledtrades($currency)
+    public function get_cancelled_trades()
     {
-        return $this->send_public_request(self::uri_cancelledtrades, $currency);
+        return $this->send_public_request(self::uri_cancelledtrades);
     }
 
     // WARNING : since this is a big download, there is a rate limit on how often you can get it, 
     // limit your requests to 5 / hour or you could be dropped / banned. 
-    public function get_fulldepth($currency)
+    public function get_full_depth()
     {
-        return $this->send_public_request(self::uri_fulldepth, $currency);
+        return $this->send_public_request(self::uri_fulldepth);
     }
 
-    https://mtgox.com/api/1/generic/bitcoin/tx_details?hash=4462c88079cc51972f1bdcb8a4240ee8757b0bb69df828ade051c95ced540fa0
-
-    private function send_public_request($uri, $currency, $params=array())
+    public function get_transaction_by_hash($hash)
     {
-        $uri = sprintf($uri, $this->sanitise_currency($currency));
+        return $this->send_public_request(self::uri_tx_details, array('hash'=>$hash));
+    }
+
+    public function get_block_by_depth($depth)
+    {
+        return $this->send_public_request(self::uri_block_list, array('depth'=>$depth));
+    }
+
+    public function get_block_by_hash($hash)
+    {
+        return $this->send_public_request(self::uri_block_list, array('hash'=>$hash));
+    }
+
+    public function get_address_info($hash)
+    {
+        return $this->send_public_request(self::uri_addr_details, array('hash'=>$hash));
+    }
+
+    // The "lag" value is the age in microseconds of the oldest order pending execution If it's too 
+    // large it means the engine is busy, and the depth is probably not reliable 
+    public function get_order_lag()
+    {
+        return $this->send_public_request(self::uri_order_lag);
+    }
+
+    // returns information about a currency ( number of decimals . . . ) 
+    public function get_currency_info($currency=null)
+    {
+        if ($currency)
+            $currency = $this->sanitise_currency($currency);
+        else
+            $currency = $this->active_currency;
+        
+        return $this->send_public_request(self::uri_currency_info, array('currency'=>$currency));
+    }
+
+    private function send_public_request($uri, $params=array())
+    {
+        if (strstr($uri, '%s'))
+            $uri = sprintf($uri, $this->active_currency);
+
         $uri .= '?' . $this->build_get_string($params);
 
         $result = $this->send_api_request($uri);
