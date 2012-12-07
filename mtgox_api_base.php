@@ -3,11 +3,14 @@
 class MtGox_Api_Base
 {
 
-    private $key;
-    private $secret;
-    private $active_currency;
+    protected $key;
+    protected $secret;
+    protected $active_currency;
 
     const api_url = 'https://mtgox.com/api/';
+
+    const order_buy = 'bid';
+    const order_sell = 'ask';
 
     protected $currency_codes = array(
         'USD' => 'USD',
@@ -28,11 +31,18 @@ class MtGox_Api_Base
         'THB' => 'THB'
     );
 
-    public function __construct($key=null, $secret=null, $currency='USD')
+    public function __construct($currency='USD', $key=null, $secret=null)
     {
         $this->key = $key;
         $this->secret = $secret;
         $this->set_currency($currency);
+    }
+
+    public function set_authentication($key, $secret)
+    {
+        $this->key = $key;
+        $this->secret = $secret;
+        return $this;
     }
 
     public function set_currency($currency)
@@ -51,11 +61,32 @@ class MtGox_Api_Base
         return $currency;
     }
 
-    public function send_api_request($path, $params = array())
+    protected function send_request($uri, $params=array())
     {
-        $mt = explode(' ', microtime());
-        $params['nonce'] = $mt[1] . substr($mt[0], 2, 6);
+        if (strstr($uri, '%s'))
+            $uri = sprintf($uri, $this->active_currency);
+
+        $result = $this->post_api_request($uri, $params);
+        return $this->process_api_response($result);
+    }
+
+    protected function process_api_response($result)
+    {
+        if (!isset($result['result']))
+            return $result;
+
+        if (isset($result['result']) && $result['result'] == 'error')
+            throw new Exception($result['error']);
+
+        return $result['return'];
+    }
+
+    protected function post_api_request($path, $params = array())
+    {
+        $params['nonce'] = self::create_nonce();
         $post_data = http_build_query($params, '', '&');
+        $url = self::api_url . $path;
+
         $headers = array(
             'Rest-Key: ' . $this->key,
             'Rest-Sign: ' . base64_encode(
@@ -70,7 +101,7 @@ class MtGox_Api_Base
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
         }
-        curl_setopt($ch, CURLOPT_URL, self::api_url . $path);
+        curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -87,13 +118,45 @@ class MtGox_Api_Base
         return $result;
     }
 
-    private function build_get_string($params)
+    private static function create_nonce()
     {
-        $get_array = array();
-        foreach ($params as $key=>$val)
-            $get_array[] = $key.'='.$val;
+        $mt = explode(' ', microtime());
+        return $mt[1] . substr($mt[0], 2, 6);
+    }
 
-        return implode("&", $get_array);
-    }    
+    public static function convert_btc_to_int($amount)
+    {
+        $int = (float)$amount * 100000000;
+        return (int)$int;
+    }
+
+    public static function convert_int_to_btc($amount)
+    {
+        $int = (int)$amount / 100000000;
+        return (float)$int;
+    }
+
+    public static function convert_currency_to_int($amount, $currency)
+    {
+        // japanese yen
+        if ($currency == 'JPY')
+            $int = (float)$amount * 1000;
+        else
+            $int = (float)$amount * 100000;
+
+        return (int)$int;
+    }
+
+    public static function convert_int_to_currency($amount, $currency=null)
+    {
+        // japanese yen
+        if ($currency == 'JPY')
+            $int = (int)$amount / 1000;
+        else
+            $int = (int)$amount / 100000;
+
+        return (float)$int;
+    }
+
 
 }

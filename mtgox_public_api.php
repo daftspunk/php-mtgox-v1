@@ -17,14 +17,14 @@ class MtGox_Public_Api extends MtGox_Api_Base
     // returns the current ticker for the selected currency
     public function get_ticker()
     {
-        return $this->send_public_request(self::uri_ticker);
+        return $this->send_request(self::uri_ticker);
     }
 
     // Depth returns outstanding asks (selling) and bids (buying) orders
     //   Returns array('asks'=>array(...), 'bids'=>array(...));
     public function get_depth()
     {
-        return $this->send_public_request(self::uri_depth);
+        return $this->send_request(self::uri_depth);
     }
 
     // To get only the trades since a given trade id
@@ -36,47 +36,47 @@ class MtGox_Public_Api extends MtGox_Api_Base
 
         $params['primary'] = ($show_duplicates) ? 'N' : 'Y';
 
-        return $this->send_public_request(self::uri_trades, $params);
+        return $this->send_request(self::uri_trades, $params);
     }
 
     // returns a list of all the cancelled trades this last month, list of trade ids in json format
     public function get_cancelled_trades()
     {
-        return $this->send_public_request(self::uri_cancelledtrades);
+        return $this->send_request(self::uri_cancelledtrades);
     }
 
     // WARNING : since this is a big download, there is a rate limit on how often you can get it, 
     // limit your requests to 5 / hour or you could be dropped / banned. 
     public function get_full_depth()
     {
-        return $this->send_public_request(self::uri_fulldepth);
+        return $this->send_request(self::uri_fulldepth);
     }
 
     public function get_transaction_by_hash($hash)
     {
-        return $this->send_public_request(self::uri_tx_details, array('hash'=>$hash));
+        return $this->send_request(self::uri_tx_details, array('hash'=>$hash));
     }
 
     public function get_block_by_depth($depth)
     {
-        return $this->send_public_request(self::uri_block_list, array('depth'=>$depth));
+        return $this->send_request(self::uri_block_list, array('depth'=>$depth));
     }
 
     public function get_block_by_hash($hash)
     {
-        return $this->send_public_request(self::uri_block_list, array('hash'=>$hash));
+        return $this->send_request(self::uri_block_list, array('hash'=>$hash));
     }
 
     public function get_address_info($hash)
     {
-        return $this->send_public_request(self::uri_addr_details, array('hash'=>$hash));
+        return $this->send_request(self::uri_addr_details, array('hash'=>$hash));
     }
 
     // The "lag" value is the age in microseconds of the oldest order pending execution If it's too 
     // large it means the engine is busy, and the depth is probably not reliable 
     public function get_order_lag()
     {
-        return $this->send_public_request(self::uri_order_lag);
+        return $this->send_request(self::uri_order_lag);
     }
 
     // returns information about a currency ( number of decimals . . . ) 
@@ -87,22 +87,6 @@ class MtGox_Public_Api extends MtGox_Api_Base
         else
             $currency = $this->active_currency;
         
-        return $this->send_public_request(self::uri_currency_info, array('currency'=>$currency));
+        return $this->send_request(self::uri_currency_info, array('currency'=>$currency));
     }
-
-    private function send_public_request($uri, $params=array())
-    {
-        if (strstr($uri, '%s'))
-            $uri = sprintf($uri, $this->active_currency);
-
-        $uri .= '?' . $this->build_get_string($params);
-
-        $result = $this->send_api_request($uri);
-
-        if (!isset($result['result']) || $result['result'] != 'success')
-            throw new Exception('Error from gateway');
-
-        return $result['return'];
-    }
-
 }
