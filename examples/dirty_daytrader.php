@@ -9,7 +9,7 @@
 /* Usage example:
 
 <?
-	include('daytrader_class.php');
+	include('dirty_daytrader.php');
 	$dt = DayTrader::create('mtgox-key', 'mtgox-secret');
 	$currency = isset($_GET['currency'])?$_GET['currency']:'AUD';
 	$currency = strtoupper($currency);
