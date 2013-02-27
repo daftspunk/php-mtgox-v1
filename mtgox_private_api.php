@@ -65,10 +65,20 @@ class MtGox_Private_Api extends MtGox_Api_Base
         else
             $currency = $this->active_currency;
 
-        //alternate is self::uri_wallet_history_alt
-        return $this->send_request(self::uri_wallet_history);
-    }
+        $params = array(
+            'currency' => $currency,
+            'type' => $type,
+            'date_start' => $date_start,
+            'date_end' => $date_end,
+            'trade_id' => $trade_id,
+            'page' => $page,
+            'use_alternate' => $use_alternate
+        );
 
+        //alternate is self::uri_wallet_history_alt
+        return $this->send_request(self::uri_wallet_history, $params);
+    }
+    
     // Buy bitcoins
     public function submit_buy_order($amount, $price)
     {
